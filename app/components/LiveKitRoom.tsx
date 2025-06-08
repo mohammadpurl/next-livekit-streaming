@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { Room, RoomEvent, RemoteParticipant, LocalParticipant, VideoPresets } from 'livekit-client';
 import { LIVEKIT_URL } from '../config/livekit';
+import { askQuestion } from '../services/api';
 
 interface LiveKitRoomProps {
   roomName: string;
@@ -13,6 +14,8 @@ export default function LiveKitRoom({ roomName, token }: LiveKitRoomProps) {
   const [room, setRoom] = useState<Room | null>(null);
   const [participants, setParticipants] = useState<RemoteParticipant[]>([]);
   const [localParticipant, setLocalParticipant] = useState<LocalParticipant | null>(null);
+  const [transcription, setTranscription] = useState<string>('');
+  const [avatarResponse, setAvatarResponse] = useState<string>('');
 
   useEffect(() => {
     const connectToRoom = async () => {
@@ -30,6 +33,29 @@ export default function LiveKitRoom({ roomName, token }: LiveKitRoomProps) {
 
       newRoom.on(RoomEvent.ParticipantDisconnected, (participant: RemoteParticipant) => {
         setParticipants(prev => prev.filter(p => p.sid !== participant.sid));
+      });
+
+      // Handle transcription
+      newRoom.on(RoomEvent.DataReceived, async (payload: Uint8Array) => {
+        const text = new TextDecoder().decode(payload);
+        setTranscription(text);
+        
+        try {
+          // Call backend API with transcribed text
+          const response = await askQuestion(text);
+          setAvatarResponse(response.answer || response.text || '');
+          
+          // Here you would typically send the response to the avatar
+          // This depends on your avatar implementation
+          if (newRoom.localParticipant) {
+            newRoom.localParticipant.publishData(
+              new TextEncoder().encode(JSON.stringify({ type: 'avatar_response', text: response.answer || response.text })),
+              { reliable: true }
+            );
+          }
+        } catch (error) {
+          console.error('Error processing transcription:', error);
+        }
       });
 
       try {
@@ -68,6 +94,11 @@ export default function LiveKitRoom({ roomName, token }: LiveKitRoomProps) {
           <div className="absolute bottom-2 left-2 bg-black bg-opacity-50 text-white px-2 py-1 rounded">
             You
           </div>
+          {transcription && (
+            <div className="absolute top-2 left-2 bg-black bg-opacity-50 text-white px-2 py-1 rounded">
+              Transcription: {transcription}
+            </div>
+          )}
         </div>
       )}
       
@@ -89,6 +120,11 @@ export default function LiveKitRoom({ roomName, token }: LiveKitRoomProps) {
           <div className="absolute bottom-2 left-2 bg-black bg-opacity-50 text-white px-2 py-1 rounded">
             {participant.identity}
           </div>
+          {avatarResponse && (
+            <div className="absolute top-2 left-2 bg-black bg-opacity-50 text-white px-2 py-1 rounded">
+              Response: {avatarResponse}
+            </div>
+          )}
         </div>
       ))}
     </div>

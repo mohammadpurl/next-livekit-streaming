@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
-import StreamingAvatar, { AvatarQuality, StreamingEvents, TaskType } from '@heygen/streaming-avatar';
+import StreamingAvatar, { AvatarQuality, StreamingEvents, TaskType, StartAvatarResponse } from '@heygen/streaming-avatar';
 import { AudioRecorder } from '../audio-handler';
+import { askQuestion } from '../services/api';
 
-interface SessionData {
+interface SessionData extends StartAvatarResponse {
   id: string;
   status: string;
-  [key: string]: any;
 }
 
 interface StreamEvent {
@@ -53,7 +53,11 @@ export default function AvatarChat() {
       });
 
       setAvatar(newAvatar);
-      setSessionData(session);
+      setSessionData({
+        ...session,
+        id: session.session_id,
+        status: 'active'
+      });
     } catch (error) {
       console.error('Failed to initialize avatar session:', error);
     }
@@ -91,18 +95,12 @@ export default function AvatarChat() {
     if (!avatar || !inputText) return;
 
     try {
-      const response = await fetch('/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: inputText }),
-      });
-
-      const data = await response.json();
+      const response = await askQuestion(inputText);
       
-      if (data.response) {
+      if (response.answer || response.answer) {
         await avatar.speak({
-          text: data.response,
-          taskType: TaskType.TALK,
+          text: response.answer ,
+          taskType: TaskType.REPEAT,
         });
       }
       
@@ -117,10 +115,17 @@ export default function AvatarChat() {
       (status) => setStatus(status),
       async (text) => {
         if (avatar) {
-          await avatar.speak({
-            text: text,
-            taskType: TaskType.TALK,
-          });
+          try {
+            const response = await askQuestion(text);
+            if (response.answer || response.text) {
+              await avatar.speak({
+                text: response.answer || response.text,
+                taskType: TaskType.REPEAT,
+              });
+            }
+          } catch (error) {
+            console.error('Error processing transcribed text:', error);
+          }
         }
       }
     );
