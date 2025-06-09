@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import StreamingAvatar, { AvatarQuality, StreamingEvents, TaskType, StartAvatarResponse } from '@heygen/streaming-avatar';
 import { AudioRecorder } from '../audio-handler';
 import { askQuestion } from '../services/api';
@@ -80,7 +80,7 @@ export default function AvatarChat() {
     setSessionData(null);
   };
 
-  const terminateAvatarSession = async () => {
+  const terminateAvatarSession = useCallback(async () => {
     if (avatar && sessionData) {
       await avatar.stopAvatar();
       if (videoRef.current) {
@@ -89,7 +89,13 @@ export default function AvatarChat() {
       setAvatar(null);
       setSessionData(null);
     }
-  };
+  }, [avatar, sessionData]);
+
+  useEffect(() => {
+    return () => {
+      terminateAvatarSession();
+    };
+  }, [terminateAvatarSession]);
 
   const handleSpeak = async () => {
     if (!avatar || !inputText) return;
@@ -144,12 +150,6 @@ export default function AvatarChat() {
       setIsRecording(false);
     }
   };
-
-  useEffect(() => {
-    return () => {
-      terminateAvatarSession();
-    };
-  }, []);
 
   return (
     <div className="container">

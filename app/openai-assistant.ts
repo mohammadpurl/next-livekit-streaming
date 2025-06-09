@@ -1,9 +1,10 @@
 import OpenAI from "openai";
+import { Assistant, Thread } from "openai/resources/beta";
 
 export class OpenAIAssistant {
   private client: OpenAI;
-  private assistant: any;
-  private thread: any;
+  private assistant!: Assistant;
+  private thread!: Thread;
 
   constructor(apiKey: string) {
     this.client = new OpenAI({ apiKey, dangerouslyAllowBrowser: true });
