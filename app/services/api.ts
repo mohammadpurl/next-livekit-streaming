@@ -1,11 +1,9 @@
 export async function askQuestion(question: string) {
   try {
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/ask`, {
+    console.log("process.env.NEXT_PUBLIC_API_URL",process.env.NEXT_PUBLIC_API_URL)
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/ask?question=${encodeURIComponent(question)}`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ question }),
+      headers: { 'Content-Type': 'application/json' },
     });
     if (!response.ok) {
       throw new Error('Failed to get response from backend');
