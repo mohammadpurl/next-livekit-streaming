@@ -50,6 +50,7 @@ export default function AvatarChat() {
           voiceId: "508da0af14044417a916cba1d00f632a",
           rate: 1.0,
         },
+        
       });
 
       setAvatar(newAvatar);
