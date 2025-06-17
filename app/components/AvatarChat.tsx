@@ -18,9 +18,9 @@ interface SessionData extends StartAvatarResponse {
   status: string;
 }
 
-interface StreamEvent {
-  detail: MediaStream;
-}
+// interface StreamEvent {
+//   detail: MediaStream;
+// }
 
 export default function AvatarChat() {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -28,10 +28,10 @@ export default function AvatarChat() {
   const [sessionData, setSessionData] = useState<SessionData | null>(null);
   const [isRecording, setIsRecording] = useState(false);
   const [status, setStatus] = useState('');
-  const [inputText, setInputText] = useState('');
+  // const [inputText, setInputText] = useState('');
   const audioRecorderRef = useRef<AudioRecorder | null>(null);
 
-  const avatarRef = useRef<any>(null);
+  const avatarRef = useRef<unknown>(null);
 
   const fetchAccessToken = async () => {
     try {
@@ -45,7 +45,7 @@ export default function AvatarChat() {
       throw error;
     }
   };
-  const { initAvatar, startAvatar, stopAvatar, sessionState, stream } =
+  const { initAvatar, startAvatar, sessionState } =
   useStreamingAvatarSession();
 
   const DEFAULT_CONFIG: ExtendedStartAvatarRequest = {
@@ -72,35 +72,35 @@ export default function AvatarChat() {
     useState<ExtendedStartAvatarRequest>(DEFAULT_CONFIG);
   const mediaStream = useRef<HTMLVideoElement>(null);
 
-  const initializeAvatarSession = async () => {
-    try {
-      const token = await fetchAccessToken();
-      const newAvatar = new StreamingAvatar({ token });
+  // const initializeAvatarSession = async () => {
+  //   try {
+  //     const token = await fetchAccessToken();
+  //     const newAvatar = new StreamingAvatar({ token });
 
-      newAvatar.on(StreamingEvents.STREAM_READY, handleStreamReady);
-      newAvatar.on(StreamingEvents.STREAM_DISCONNECTED, handleStreamDisconnected);
+  //     newAvatar.on(StreamingEvents.STREAM_READY, handleStreamReady);
+  //     newAvatar.on(StreamingEvents.STREAM_DISCONNECTED, handleStreamDisconnected);
 
-      const session = await newAvatar.createStartAvatar({
-        quality: AvatarQuality.Medium,
-        avatarName: "Bryan_IT_Sitting_public",
-        language: "Persian",
-        voice: {
-          voiceId: "508da0af14044417a916cba1d00f632a",
-          rate: 1.0,
-        },
+  //     const session = await newAvatar.createStartAvatar({
+  //       quality: AvatarQuality.Medium,
+  //       avatarName: "Bryan_IT_Sitting_public",
+  //       language: "Persian",
+  //       voice: {
+  //         voiceId: "508da0af14044417a916cba1d00f632a",
+  //         rate: 1.0,
+  //       },
         
-      });
+  //     });
 
-      setAvatar(newAvatar);
-      setSessionData({
-        ...session,
-        id: session.session_id,
-        status: 'active'
-      });
-    } catch (error) {
-      console.error('Failed to initialize avatar session:', error);
-    }
-  };
+  //     setAvatar(newAvatar);
+  //     setSessionData({
+  //       ...session,
+  //       id: session.session_id,
+  //       status: 'active'
+  //     });
+  //   } catch (error) {
+  //     console.error('Failed to initialize avatar session:', error);
+  //   }
+  // };
 
   const startSessionV2 = useMemoizedFn(async () => {
     try {
@@ -131,22 +131,22 @@ export default function AvatarChat() {
     }
   });
 
-  const handleStreamReady = (event: StreamEvent) => {
-    if (event.detail && videoRef.current) {
-      videoRef.current.srcObject = event.detail;
-      videoRef.current.onloadedmetadata = () => {
-        videoRef.current?.play().catch(console.error);
-      };
-    }
-  };
+  // const handleStreamReady = (event: StreamEvent) => {
+  //   if (event.detail && videoRef.current) {
+  //     videoRef.current.srcObject = event.detail;
+  //     videoRef.current.onloadedmetadata = () => {
+  //       videoRef.current?.play().catch(console.error);
+  //     };
+  //   }
+  // };
 
-  const handleStreamDisconnected = () => {
-    if (videoRef.current) {
-      videoRef.current.srcObject = null;
-    }
-    setAvatar(null);
-    setSessionData(null);
-  };
+  // const handleStreamDisconnected = () => {
+  //   if (videoRef.current) {
+  //     videoRef.current.srcObject = null;
+  //   }
+  //   setAvatar(null);
+  //   setSessionData(null);
+  // };
 
   const terminateAvatarSession = useCallback(async () => {
     if (avatar && sessionData) {
@@ -165,24 +165,24 @@ export default function AvatarChat() {
     };
   }, [terminateAvatarSession]);
 
-  const handleSpeak = async () => {
-    if (!avatar || !inputText) return;
+  // const handleSpeak = async () => {
+  //   if (!avatar || !inputText) return;
 
-    try {
-      const response = await askQuestion(inputText);
+  //   try {
+  //     const response = await askQuestion(inputText);
       
-      if (response.answer || response.answer) {
-        await avatar.speak({
-          text: response.answer ,
-          taskType: TaskType.REPEAT,
-        });
-      }
+  //     if (response.answer || response.answer) {
+  //       await avatar.speak({
+  //         text: response.answer ,
+  //         taskType: TaskType.REPEAT,
+  //       });
+  //     }
       
-      setInputText('');
-    } catch (error) {
-      console.error('Error getting response:', error);
-    }
-  };
+  //     setInputText('');
+  //   } catch (error) {
+  //     console.error('Error getting response:', error);
+  //   }
+  // };
 
   const initializeAudioRecorder = () => {
     audioRecorderRef.current = new AudioRecorder(
@@ -249,6 +249,7 @@ export default function AvatarChat() {
       {sessionState === StreamingAvatarSessionState.CONNECTED && (
         <MessageHistory />
       )}
+      <div className="text-zinc-400">{status}</div>
     </div>
   );
 } 
