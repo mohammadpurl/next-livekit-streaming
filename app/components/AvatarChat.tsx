@@ -1,7 +1,17 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
-import StreamingAvatar, { AvatarQuality, StreamingEvents, TaskType, StartAvatarResponse } from '@heygen/streaming-avatar';
+import StreamingAvatar, { AvatarQuality, StreamingEvents, TaskType, StartAvatarResponse, VoiceChatTransport, STTProvider, VoiceEmotion, ElevenLabsModel } from '@heygen/streaming-avatar';
 import { AudioRecorder } from '../audio-handler';
 import { askQuestion } from '../services/api';
+import { StreamingAvatarSessionState, useStreamingAvatarSession } from './logic';
+import { AvatarVideo } from './AvatarSession/AvatarVideo';
+import { AvatarControls } from './AvatarSession/AvatarControls';
+import { Button } from './Button';
+import { LoadingIcon } from './Icons';
+import { MessageHistory } from './AvatarSession/MessageHistory';
+import { AvatarConfig } from './AvatarConfig';
+import { ExtendedStartAvatarRequest } from './logic/ExtendedTypes';
+import { AVATARS } from '../lib/constants';
+import { useMemoizedFn } from 'ahooks';
 
 interface SessionData extends StartAvatarResponse {
   id: string;
@@ -21,6 +31,8 @@ export default function AvatarChat() {
   const [inputText, setInputText] = useState('');
   const audioRecorderRef = useRef<AudioRecorder | null>(null);
 
+  const avatarRef = useRef<any>(null);
+
   const fetchAccessToken = async () => {
     try {
       const response = await fetch('/api/heygen-token', {
@@ -33,6 +45,32 @@ export default function AvatarChat() {
       throw error;
     }
   };
+  const { initAvatar, startAvatar, stopAvatar, sessionState, stream } =
+  useStreamingAvatarSession();
+
+  const DEFAULT_CONFIG: ExtendedStartAvatarRequest = {
+    quality: AvatarQuality.Low,
+    avatarName: AVATARS[0].avatar_id,
+    voice: {
+      voiceId: "508da0af14044417a916cba1d00f632a",
+      rate: 1.0,
+      emotion: VoiceEmotion.EXCITED,
+      model: ElevenLabsModel.eleven_flash_v2_5,
+    },
+    language: "fa",
+    knowledgeBase: "",
+    knowledgeId: "1629692875c84134abd4e37325cf7535",
+    voiceChatTransport: VoiceChatTransport.WEBSOCKET,
+    sttSettings: {
+      provider: STTProvider.GLADIA,
+    },
+    version: "v2",
+    useSilencePrompt: true,
+  };
+  
+  const [config, setConfig] =
+    useState<ExtendedStartAvatarRequest>(DEFAULT_CONFIG);
+  const mediaStream = useRef<HTMLVideoElement>(null);
 
   const initializeAvatarSession = async () => {
     try {
@@ -63,6 +101,35 @@ export default function AvatarChat() {
       console.error('Failed to initialize avatar session:', error);
     }
   };
+
+  const startSessionV2 = useMemoizedFn(async () => {
+    try {
+      const newToken = await fetchAccessToken();
+      const avatar = initAvatar(newToken);
+
+      avatarRef.current = avatar;
+
+      avatar.on(StreamingEvents.AVATAR_START_TALKING, console.log);
+      avatar.on(StreamingEvents.AVATAR_STOP_TALKING, console.log);
+      // avatar.on(StreamingEvents.STREAM_DISCONNECTED, stopFiltering);
+      // avatar.on(StreamingEvents.STREAM_READY, () => {
+      //   if (isVoiceChat) startFiltering();
+      // });
+      // avatar.on(StreamingEvents.USER_START, handleUserStart);
+      // avatar.on(StreamingEvents.USER_STOP, handleUserStop);
+
+      await startAvatar(config);
+      setAvatar(avatar);
+      await toggleRecording();
+      // if (isVoiceChat) {
+      //   await startVoiceChat(true); // قطع STT پیش‌فرض
+      //   initGladiaSocket();
+      //   startMicrophoneStream();
+      // }
+    } catch (error) {
+      console.error("Error starting avatar session:", error);
+    }
+  });
 
   const handleStreamReady = (event: StreamEvent) => {
     if (event.detail && videoRef.current) {
@@ -153,59 +220,35 @@ export default function AvatarChat() {
   };
 
   return (
-    <div className="container">
-      <video
-        ref={videoRef}
-        id="avatarVideo"
-        autoPlay
-        playsInline
-      />
-      
-      <div className="controls-section">
-        <div className="button-group">
-          <button
-            onClick={initializeAvatarSession}
-            disabled={!!avatar}
-            className="contrast"
-          >
-            Start Session
-          </button>
-          
-          <button
-            onClick={terminateAvatarSession}
-            disabled={!avatar}
-            className="contrast"
-          >
-            End Session
-          </button>
+    <div className="w-full flex flex-col gap-4">
+      <div className="flex flex-col rounded-xl bg-zinc-900 overflow-hidden">
+        <div className="relative w-full aspect-video overflow-hidden flex flex-col items-center justify-center">
+          {sessionState !== StreamingAvatarSessionState.INACTIVE ? (
+            <AvatarVideo ref={mediaStream} />
+          ) : (
+            <AvatarConfig config={config} onConfigChange={setConfig} />
+          )}
         </div>
-
-        <div className="input-group">
-          <input
-            type="text"
-            value={inputText}
-            onChange={(e) => setInputText(e.target.value)}
-            placeholder="Type your message..."
-          />
-          <button
-            onClick={handleSpeak}
-            disabled={!avatar || !inputText}
-          >
-            Speak
-          </button>
+        <div className="flex flex-col gap-3 items-center justify-center p-4 border-t border-zinc-700 w-full">
+          {sessionState === StreamingAvatarSessionState.CONNECTED ? (
+            <AvatarControls />
+          ) : sessionState === StreamingAvatarSessionState.INACTIVE ? (
+            <div className="flex flex-row gap-4">
+              <Button onClick={() => startSessionV2()}>
+                Start Voice Chat
+              </Button>
+              <Button onClick={() => startSessionV2()}>
+                Start Text Chat
+              </Button>
+            </div>
+          ) : (
+            <LoadingIcon />
+          )}
         </div>
-
-        <div className="button-group">
-          <button
-            onClick={toggleRecording}
-            className={isRecording ? 'secondary' : 'primary'}
-          >
-            {isRecording ? 'Stop Recording' : 'Start Recording'}
-          </button>
-        </div>
-        
-        {status && <p className="status">{status}</p>}
       </div>
+      {sessionState === StreamingAvatarSessionState.CONNECTED && (
+        <MessageHistory />
+      )}
     </div>
   );
 } 
