@@ -25,19 +25,18 @@ export const useSpeechFilter = () => {
   }, [avatarRef]);
 
   useEffect(() => {
-    if (!avatarRef.current) return;
+    const avatar = avatarRef.current;
+    if (!avatar) return;
 
-    // Add event listeners for user speech events
-    avatarRef.current.on('USER_START', handleUserStart);
-    avatarRef.current.on('USER_STOP', handleUserStop);
+    avatar.on('USER_START', handleUserStart);
+    avatar.on('USER_STOP', handleUserStop);
 
     return () => {
-      // Clean up event listeners and timer
       if (silenceTimerRef.current) {
         clearTimeout(silenceTimerRef.current);
       }
-      avatarRef.current?.off('USER_START', handleUserStart);
-      avatarRef.current?.off('USER_STOP', handleUserStop);
+      avatar.off('USER_START', handleUserStart);
+      avatar.off('USER_STOP', handleUserStop);
     };
   }, [avatarRef, handleUserStart, handleUserStop]);
 

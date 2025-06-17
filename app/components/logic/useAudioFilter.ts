@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef } from "react";
 import { useStreamingAvatarContext } from "./context";
-import { StreamingEvents } from "@heygen/streaming-avatar";
+
 
 export const useAudioFilter = () => {
   const { avatarRef } = useStreamingAvatarContext();

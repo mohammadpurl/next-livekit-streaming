@@ -1,4 +1,5 @@
 export function HeyGenLogo() {
+  // eslint-disable-next-line @next/next/no-img-element
   return <img alt="HeyGen Logo" className="h-8" src="/heygen-logo.png" />;
 }
 
